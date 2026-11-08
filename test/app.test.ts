@@ -9,11 +9,12 @@ import { createApp } from '../src/app.js';
 const SECRET = 'verify-secret';
 let server: Server;
 let base = '';
+const logged: Record<string, unknown>[] = [];
 
 before(async () => {
   // verify_identity is signed; record_agreement has no secret, so it is not verified.
   server = createServer(
-    createApp({ port: 0, secrets: { verify_identity: SECRET } }, pino({ level: 'silent' })),
+    createApp({ port: 0, secrets: { verify_identity: SECRET } }, pino({ level: 'debug' }, { write: (s: string) => logged.push(JSON.parse(s)) })),
   );
   await new Promise<void>((r) => server.listen(0, r));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -64,4 +65,14 @@ test('an unknown path is a 404', async () => {
   assert.equal((await call('/nope', {})).status, 404);
   // Names inherited from Object.prototype are not tools.
   for (const p of ['/constructor', '/hasOwnProperty', '/__proto__']) assert.equal((await call(p, {})).status, 404);
+});
+
+test('at debug level each request and its response are logged in full', async () => {
+  logged.length = 0;
+  await call('/record_agreement', { plan: 'full' });
+  const received = logged.find((l) => l.msg === 'received');
+  const sent = logged.find((l) => l.msg === 'sent');
+  assert.equal(received?.body, JSON.stringify({ plan: 'full' }));
+  assert.equal(sent?.status, 200);
+  assert.equal((sent?.body as Record<string, unknown>).recorded, true);
 });
