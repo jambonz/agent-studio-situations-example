@@ -36,7 +36,7 @@ export function createApp(config: Config, log: Logger): RequestListener {
   return async (req, res) => {
     const url = req.url ?? '/';
     const tool = url.split('?')[0]!.slice(1);
-    const handler = req.method === 'POST' ? TOOLS[tool] : undefined;
+    const handler = req.method === 'POST' ? TOOLS.get(tool) : undefined;
     if (!handler) return send(res, 404, { error: 'not found' });
 
     const raw = await readBody(req).catch(() => null);

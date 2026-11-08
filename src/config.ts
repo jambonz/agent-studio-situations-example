@@ -11,7 +11,7 @@ export const secretEnvName = (tool: string): string => `STUDIO_SIGNING_SECRET_${
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const secrets: Record<string, string> = {};
-  for (const tool of Object.keys(TOOLS)) {
+  for (const tool of TOOLS.keys()) {
     const s = env[secretEnvName(tool)];
     if (s) secrets[tool] = s;
   }
