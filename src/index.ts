@@ -8,7 +8,8 @@ import { createApp } from './app.js';
 import { loadConfig, secretEnvName } from './config.js';
 import { TOOLS } from './tools/index.js';
 
-const log = pino({ name: 'situations-server' });
+// LOG_LEVEL=debug also logs every request and response in full, caller details included: for troubleshooting only.
+const log = pino({ name: 'situations-server', level: process.env.LOG_LEVEL ?? 'info' });
 const config = loadConfig();
 
 const unverified = [...TOOLS.keys()].filter((t) => !config.secrets[t]);

@@ -37,6 +37,19 @@ ngrok http 3100
 
 The test account is last 4 digits `4321`, ZIP `02139`.
 
+## Logging
+
+The server logs one line per tool call at `info`: the tool, whether it succeeded, and any situation change. Caller
+details stay out of it. To see every request and response in full while troubleshooting, set `LOG_LEVEL=debug`:
+
+```bash
+LOG_LEVEL=debug npm run dev
+```
+
+That logs each request's method, path, `X-Studio-Signature` and raw body as `received`, and each response's status and
+body as `sent`. Those bodies hold what the caller said, such as account digits and ZIP codes, so keep debug logging to
+test calls.
+
 ## Checking that requests come from Studio
 
 Studio signs every tool request with HMAC-SHA256 in the `X-Studio-Signature` header:

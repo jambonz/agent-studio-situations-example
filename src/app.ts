@@ -36,11 +36,23 @@ export function createApp(config: Config, log: Logger): RequestListener {
   return async (req, res) => {
     const url = req.url ?? '/';
     const tool = url.split('?')[0]!.slice(1);
+    // At debug level, every response is logged as sent, after the request it answers.
+    const reply = (status: number, body: Json): void => {
+      log.debug({ method: req.method, url, status, body }, 'sent');
+      send(res, status, body);
+    };
     const handler = req.method === 'POST' ? TOOLS.get(tool) : undefined;
-    if (!handler) return send(res, 404, { error: 'not found' });
+    if (!handler) {
+      log.debug({ method: req.method, url }, 'received');
+      return reply(404, { error: 'not found' });
+    }
 
     const raw = await readBody(req).catch(() => null);
-    if (raw === null) return send(res, 413, { error: 'body too large' });
+    log.debug(
+      { method: req.method, url, signature: req.headers['x-studio-signature'] ?? null, body: raw },
+      'received',
+    );
+    if (raw === null) return reply(413, { error: 'body too large' });
 
     const secret = config.secrets[tool];
     if (
@@ -48,19 +60,19 @@ export function createApp(config: Config, log: Logger): RequestListener {
       !verifySignature(secret, req.headers['x-studio-signature'] as string | undefined, 'POST', url, raw)
     ) {
       log.warn({ tool }, 'rejected: bad or missing X-Studio-Signature');
-      return send(res, 401, { error: 'bad signature' });
+      return reply(401, { error: 'bad signature' });
     }
 
     let args: Json;
     try {
       args = raw ? (JSON.parse(raw) as Json) : {};
     } catch {
-      return send(res, 400, { error: 'body is not JSON' });
+      return reply(400, { error: 'body is not JSON' });
     }
 
     const result = handler(args);
     // The caller's details stay out of the log; the outcome and any situation change go in.
     log.info({ tool, ok: result.verified ?? result.recorded, actions: result.actions }, 'tool call');
-    send(res, 200, result);
+    reply(200, result);
   };
 }
