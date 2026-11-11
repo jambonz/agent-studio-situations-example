@@ -1,0 +1,166 @@
+{
+  "$schema": "https://beta-studio.jambonz.org/schemas/studio-agent-1.json",
+  "format": "studio-agent",
+  "version": 1,
+  "exported_at": "2026-11-10T12:37:52.148Z",
+  "snapshot": "draft",
+  "agent": {
+    "name": "Acme Collections (situations example)",
+    "direction": "inbound",
+    "config": {
+      "schema_version": 2,
+      "prompt": {
+        "prompt_id": "01a1b8ea-81f2-7280-8d19-c84cc77bf392",
+        "pin": null,
+        "timezone": "contact",
+        "sip_headers": "auto",
+        "variables": []
+      },
+      "greeting": {
+        "source": "text",
+        "text": "Hi, this is Acme Collections calling about your account. Before we go on, could you give me the last four digits of your account number and your ZIP code?",
+        "delivery": "model",
+        "wait_for_caller": false
+      },
+      "stt": {
+        "credential_sid": null,
+        "vendor": "deepgram",
+        "label": null,
+        "language": "en-US",
+        "options": {},
+        "keywords": "",
+        "fallback": null
+      },
+      "llm": {
+        "credential_sid": null,
+        "vendor": "openai",
+        "label": null,
+        "model": "gpt-4.1-mini",
+        "temperature": 0.4,
+        "max_tokens": 300,
+        "options": {},
+        "early_generation": false
+      },
+      "tts": {
+        "credential_sid": null,
+        "vendor": "deepgram",
+        "label": null,
+        "language": "en-US",
+        "voice": "aura-2-thalia-en",
+        "options": {},
+        "fallback": null,
+        "pronunciations": [],
+        "follow_caller": "off",
+        "languages": [],
+        "match_agent": false
+      },
+      "tools": {
+        "http": [
+          { "tool_id": "01a1b8e9-097e-72b3-a030-5cfd4dc3c847", "enabled": true },
+          { "tool_id": "01a1b8e9-09fc-72f6-bd16-85892ed14ab2", "enabled": true }
+        ],
+        "mcp": [],
+        "builtin": { "send_dtmf": false, "dtmf_only": false }
+      },
+      "situations": [
+        {
+          "name": "negotiation",
+          "who": "code",
+          "when": "",
+          "instructions": "The caller is verified. Their name, balance and minimum monthly payment are in the verify_identity result. Offer to settle in full first. If they can't, offer 3 payments, then 6. Never go below the minimum monthly payment. Record any agreement with record_agreement before confirming it aloud, and read its reference back.",
+          "on_resolve": "The agreement is recorded. Don't offer or discuss any other payment plan. If the caller wants to change it, offer to send the details by mail.",
+          "requires": null,
+          "tools": { "add": ["record_agreement"], "hide": [] }
+        },
+        {
+          "name": "hardship",
+          "who": "model",
+          "when": "The caller says they can't afford the payment plans because of a job loss, illness or similar.",
+          "instructions": "Be warm and unhurried, and don't push for payment. Acknowledge what the caller has told you. Offer the smallest plan the rules allow: 6 payments at the minimum monthly payment. If they still can't manage it, offer to send them details of our hardship programme by mail. Record any plan they accept with record_agreement.",
+          "on_resolve": "Hardship no longer applies. Stop offering the hardship plan or mentioning the hardship programme.",
+          "requires": "negotiation",
+          "tools": { "add": [], "hide": [] }
+        },
+        {
+          "name": "callback_request",
+          "who": "model",
+          "when": "The caller asks to be called back at another time.",
+          "instructions": "Ask which day and time suit them, and confirm the number to call. Read both back. Once the caller confirms, the situation is resolved.",
+          "on_resolve": "The callback is arranged. Don't ask about callback times again.",
+          "requires": null,
+          "tools": { "add": [], "hide": [] }
+        }
+      ]
+    }
+  },
+  "library": {
+    "prompt": {
+      "id": "01a1b8ea-81f2-7280-8d19-c84cc77bf392",
+      "name": "Acme Collections prompt",
+      "description": "The situations example: verify first, then negotiate.",
+      "body": {
+        "mode": "text",
+        "text": "You are calling for Acme Collections about an overdue account. Keep replies short and friendly. Before you discuss anything about the account, verify the caller with verify_identity: ask for the last 4 digits of their account number and their ZIP code. If verification fails, let them try once more, then offer to send details by mail.",
+        "append_builtin": true,
+        "guardrail_ids": []
+      }
+    },
+    "guardrails": [],
+    "tools": [
+      {
+        "id": "01a1b8e9-097e-72b3-a030-5cfd4dc3c847",
+        "name": "verify_identity",
+        "description": "Verify the caller before discussing their account. Ask for the last 4 digits of their account number and their ZIP code.",
+        "method": "POST",
+        "say": null,
+        "on_error": null,
+        "url": "https://your-server.example.com/verify_identity",
+        "headers": [],
+        "send_as": "json",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "account_last4": { "type": "string", "description": "Last 4 digits of the account number" },
+            "zip": { "type": "string", "description": "ZIP code on the account" }
+          },
+          "required": ["account_last4", "zip"]
+        },
+        "response": { "mode": "full", "max_chars": 2000 },
+        "timeout_ms": 8000,
+        "retries": 0,
+        "auth_secret_needed": false,
+        "secret_header_names": []
+      },
+      {
+        "id": "01a1b8e9-09fc-72f6-bd16-85892ed14ab2",
+        "name": "record_agreement",
+        "description": "Record the payment plan the caller agreed to, before confirming it aloud.",
+        "method": "POST",
+        "say": null,
+        "on_error": null,
+        "url": "https://your-server.example.com/record_agreement",
+        "headers": [],
+        "send_as": "json",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "plan": {
+              "type": "string",
+              "enum": ["full", "3_payments", "6_payments"],
+              "description": "The plan the caller agreed to"
+            },
+            "monthly_amount": { "type": "number", "description": "Monthly payment for a 3 or 6 payment plan" }
+          },
+          "required": ["plan"]
+        },
+        "response": { "mode": "full", "max_chars": 2000 },
+        "timeout_ms": 8000,
+        "retries": 0,
+        "auth_secret_needed": false,
+        "secret_header_names": []
+      }
+    ],
+    "mcp_servers": [],
+    "knowledge": []
+  }
+}
