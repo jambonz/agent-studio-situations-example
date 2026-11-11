@@ -11,7 +11,7 @@ import { TOOLS } from './tools/index.js';
 const log = pino({ name: 'situations-server' });
 const config = loadConfig();
 
-const unverified = Object.keys(TOOLS).filter((t) => !config.secrets[t]);
+const unverified = [...TOOLS.keys()].filter((t) => !config.secrets[t]);
 if (unverified.length > 0) {
   log.warn(
     { tools: unverified, set: unverified.map(secretEnvName) },

@@ -62,4 +62,6 @@ test('an agreement resolves negotiation; one below the minimum leaves it active'
 
 test('an unknown path is a 404', async () => {
   assert.equal((await call('/nope', {})).status, 404);
+  // Names inherited from Object.prototype are not tools.
+  for (const p of ['/constructor', '/hasOwnProperty', '/__proto__']) assert.equal((await call(p, {})).status, 404);
 });
